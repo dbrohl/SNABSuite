@@ -533,6 +533,44 @@ std::vector<std::vector<Real>> spikes_to_rates(const PopulationBase pop,
 	return res;
 }
 
+std::vector<std::vector<std::vector<cypress::Real>>> getSpikeTimes(std::vector<PopulationBase> populations, Real duration,
+																						  Real pause, size_t batch_size)
+{
+	std::vector<std::vector<cypress::Real>> oneLayer;
+	for(size_t j=0; j<populations.size(); j++)
+	{
+		oneLayer.push_back(std::vector<cypress::Real>(populations[j].size(), 0));
+	}
+	std::vector<std::vector<std::vector<cypress::Real>>> spike_times(batch_size, oneLayer); //[sample][layer][neuron]
+
+	for(size_t layer=0; layer<populations.size(); layer++)
+	{
+//		for(const auto &neuron : populations[layer]) {
+		for(size_t i=0; i<populations[layer].size(); i++) {
+			std::vector<Real> binnedSpikes=SpikingUtils::spike_time_binning_TTFS(
+				0.0, Real(batch_size) * (duration + pause), batch_size,
+				populations[layer][i].signals().data(0)); //returns the first spike time for each sample in this neuron
+
+			for(size_t k=0; k<batch_size; k++)
+			{
+				if(binnedSpikes[k]==std::numeric_limits<Real>::max())
+				{
+					spike_times[k][layer][i]=1;
+				}
+				else {
+					spike_times[k][layer][i]=(binnedSpikes[k]-k*(duration+pause))/(duration+pause);
+				}
+
+					#ifndef NDEBUG
+				assert(spike_times[k][layer][i]>=0 && spike_times[k][layer][i]<=1);
+					#endif
+			}
+			//each spike is now at a time between 0 and 1
+		}
+	}
+	return spike_times;
+																						  }
+
 size_t compare_labels(std::vector<uint16_t> &label, std::vector<uint16_t> &res)
 {
 	size_t count_correct = 0;

@@ -141,23 +141,23 @@ void Utilities::plot_histogram(std::string filename, std::string simulator,
 	std::string short_sim = split(split(simulator, '=')[0], '.').back();
 	try {
 		if (n_bins < 0 && normalized) {
-			system(("../plot/histogram.py " + filename + " -s " + short_sim +
+			system(("python3 ../plot/histogram.py " + filename + " -s " + short_sim +
 			        " -t " + title + " -n " + "&")
 			           .c_str());
 		}
 		else if (n_bins < 0 && !normalized) {
-			system(("../plot/histogram.py " + filename + " -s " + short_sim +
+			system(("python3 ../plot/histogram.py " + filename + " -s " + short_sim +
 			        " -t " + title + "&")
 			           .c_str());
 		}
 		else if (n_bins > 0 && normalized) {
-			system(("../plot/histogram.py " + filename + " -s " + short_sim +
+			system(("python3 ../plot/histogram.py " + filename + " -s " + short_sim +
 			        " -t " + title + " -b " + std::to_string(n_bins) + " -n " +
 			        "&")
 			           .c_str());
 		}
 		else if (n_bins > 0 && !normalized) {
-			system(("../plot/histogram.py " + filename + " -s " + short_sim +
+			system(("python3 ../plot/histogram.py " + filename + " -s " + short_sim +
 			        " -t " + title + " -b " + std::to_string(n_bins) + "&")
 			           .c_str());
 		}
@@ -173,7 +173,7 @@ void Utilities::plot_voltages_spikes(std::string filename,
                                      size_t spikes_col)
 {
 	std::string short_sim = split(split(simulator, '=')[0], '.').back();
-	std::string exec = "../plot/plot_membrane_pot.py " + filename + " -s " +
+	std::string exec = "python3 ../plot/plot_membrane_pot.py " + filename + " -s " +
 	                   short_sim + " -tc " + std::to_string(t_col) + " -y" +
 	                   std::to_string(mem_col);
 	if (spikes_file != "") {
@@ -193,7 +193,7 @@ void Utilities::plot_1d_curve(std::string filename, std::string simulator,
 {
 	std::string short_sim = split(split(simulator, '=')[0], '.').back();
 	std::string output_file = split(filename, '.')[0] + ".pdf";
-	std::string exec = "../plot/1dim_plot.py " + filename + " -x " +
+	std::string exec = "python3 ../plot/1dim_plot.py " + filename + " -x " +
 	                   std::to_string(x_col) + " -y " + std::to_string(y_col) +
 	                   " -s " + short_sim + " -o " + output_file;
 	if (std_dev_vol != -1) {

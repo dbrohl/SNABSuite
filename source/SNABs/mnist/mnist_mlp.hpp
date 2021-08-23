@@ -245,7 +245,7 @@ public:
 	virtual const Real &learnrate() const = 0;
 	virtual const mnist_helper::MNIST_DATA &mnist_train_set() = 0;
 	virtual const mnist_helper::MNIST_DATA &mnist_test_set() = 0;
-	virtual const std::vector<cypress::Matrix<Real>> &get_weights() = 0;
+	virtual std::vector<cypress::Matrix<Real>> &get_weights() = 0;
 	virtual const std::vector<mnist_helper::CONVOLUTION_LAYER> &get_conv_layers() = 0;
 	virtual const std::vector<mnist_helper::POOLING_LAYER> &get_pooling_layers() = 0;
 	virtual const std::vector<size_t> &get_layer_sizes() = 0;
@@ -603,7 +603,7 @@ public:
 	 *
 	 * @return const std::vector< cypress::Matrix< cypress::Real > >&
 	 */
-	const std::vector<cypress::Matrix<Real>> &get_weights() override
+	std::vector<cypress::Matrix<Real>> &get_weights() override
 	{
 		return m_layers;
 	}

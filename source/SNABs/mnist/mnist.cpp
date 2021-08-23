@@ -575,15 +575,25 @@ void MnistITLLastLayer::run_netw(cypress::Network &netw)
 			netw.run(pwbackend, m_batchsize * (m_duration + m_pause));
 
 			if (m_ttfs) {
-				// TODO
-				throw;
+				// TODO adapt for ttfs
+				/*Plan (aus S4NN):
+				 * Spike-Zeiten aus der letzten Schicht ggf. um letzten Spike ergänzen, ins Verhältnis setzen
+				 * S4NN testen, auf beliebig viele Schichten umschreiben
+				 * Error zwischen echten Spike-zeiten und labels berechnen
+				 * Update mit learning rate (S4NN lässt Neuronen, die nicht gefeuert haben aus?)
+				 * ggf. weight regularization
+				 * */
+				auto new_weights = backward_path_TTFS(std::get<1>(i), m_mlp->get_weights(), netw.populations(), m_last_layer_only);
+				mnist_helper::update_conns_from_mat(
+					new_weights, netw, 1.0, m_weights_scale_factor);
 			}
 			else {
-
+				// BEGIN OF RATE_CODING
 				std::vector<std::vector<std::vector<Real>>> output_rates;
 				for (auto &pop : netw.populations()) {
+                    //append for each layer the output rates
 					if (pop.signals().is_recording(0)) {
-						// if (!m_ttfs) {
+						// if (!m_ttfs)
 						if (pop.pid() != netw.populations().back().pid()) {
 							output_rates.emplace_back(
 							    mnist_helper::spikes_to_rates(
@@ -608,11 +618,13 @@ void MnistITLLastLayer::run_netw(cypress::Network &netw)
 						    std::vector<std::vector<Real>>());
 					}
 				}
+				//backwards path
 				m_mlp->backward_path_2(std::get<1>(i), output_rates,
 				                       m_last_layer_only);
 
 				mnist_helper::update_conns_from_mat(
 				    m_mlp->get_weights(), netw, 1.0, m_weights_scale_factor);
+				// END OF RATE_CODING
 			}
 
 			// Calculate batch accuracy
@@ -720,4 +732,204 @@ std::vector<std::array<cypress::Real, 4>> MnistITLLastLayer::evaluate()
 	return {std::array<cypress::Real, 4>({acc, NaN(), NaN(), NaN()}),
 	        std::array<cypress::Real, 4>({m_sim_time, NaN(), NaN(), NaN()})};
 }
+
+// HERE
+// copied from mnist_mlp.hpp
+/**
+
+ */
+std::vector<cypress::Matrix<Real>> MnistITLLastLayer::backward_path_TTFS(
+	const std::vector<uint16_t> &labels, std::vector<cypress::Matrix<Real>> &weights,
+	std::vector<PopulationBase> populations, bool last_only=false)
+{
+// #ifndef NDEBUG
+// 	assert(m_batchsize == activations.back().size());
+// #endif
+	const auto orig_weights = weights; //TODO proper copy
+	global_logger().warn("MNIST", "duration: "+std::to_string(m_duration)+", pause: "+std::to_string(m_pause));
+	std::vector<std::vector<std::vector<cypress::Real>>> spike_times=mnist_helper::getSpikeTimes(populations, m_duration, m_pause, m_batchsize);
+
+	for (size_t sample = 0; sample < m_batchsize; sample++) {
+		auto errors = compute_TTFS_error(labels[sample], spike_times[sample][populations.size()-1]);
+		auto deltas = computeAllDeltas(populations, spike_times[sample], weights, errors);
+		auto gradients = compute_gradients(populations, spike_times[sample], deltas, populations.size()-1);
+		update_mat_TTFS(weights[populations.size()-1], gradients, m_batchsize,
+		           m_mlp->learnrate());
+		if (!last_only) {
+			// for (size_t inv_layer = 1; inv_layer < m_layers.size();
+			//      inv_layer++) {
+			// 	size_t layer_id = m_layers.size() - inv_layer - 1;
+
+			// 	// error =
+			// 	//     vec_X_vec_comp(mat_X_vec(orig_weights[layer_id + 1], error),
+			// 	//                    ActivationFunction::derivative(
+			// 	//                        activations[layer_id + 1][sample]));
+			// 	auto error = compute_TTFS_error();
+			// 	update_mat(m_layers[layer_id], error,
+			// 	           activations[layer_id][sample], m_batchsize,
+			// 	           learn_rate);
+			// }
+		}
+		//TODO m_constraint.constrain_weights(m_layers);
+	}
+	//TODO m_scaled_layerwise = false;
+
+	return weights;
+}
+
+/**
+ *
+ * @param label ground truth
+ * @param spike_times First spike times of all neurons in the last layer.
+ * @return
+ */
+std::vector<cypress::Real> MnistITLLastLayer::compute_TTFS_error(uint16_t label, std::vector<cypress::Real> spike_times)
+{
+	std::vector<cypress::Real> errors;
+	cypress::Real min_time=*min_element(spike_times.begin(), spike_times.end());
+	Real gamma=3.0/256;
+
+	for (size_t i = 0; i < spike_times.size(); i++) {
+		if(min_time==1)
+		{
+			errors.push_back(i==label ? 1-gamma : 1);
+		}
+		else
+		{
+			Real expected_time;
+			if(i==label)
+			{
+				expected_time=min_time;
+			}
+			else if (spike_times[i]<(min_time+gamma))
+			{
+				expected_time=min_time+gamma;
+			}
+			else
+			{
+				expected_time=spike_times[i];
+			}
+			errors.push_back(expected_time-spike_times[i]); // divided by t_max, but t_max is 1
+		}
+
+	}
+	return errors;
+}
+
+std::vector<std::vector<cypress::Real>> MnistITLLastLayer::computeAllDeltas(std::vector<PopulationBase> structure, std::vector<std::vector<cypress::Real>> spike_times, std::vector<cypress::Matrix<cypress::Real>> weights, std::vector<cypress::Real> errors) //add normalization?
+{
+	std::vector<std::vector<cypress::Real>> deltas; //[layer][i]
+	for(size_t j=0; j<structure.size(); j++)
+	{
+		deltas.push_back(std::vector<cypress::Real>(structure[j].size(), 0));
+	}
+
+	for(size_t l=structure.size(); l>0; l--)
+	{
+		size_t layer = l-1;
+		Real sum=0;
+		global_logger().debug("computeAllDeltas", std::to_string(structure[layer].size()));
+		for (size_t i = 0; i < structure[layer].size(); i++) {
+			if(layer==structure.size()-1) //output layer
+			{
+				deltas[layer][i]= -errors[i];
+			}
+			else
+			{
+				for (size_t k = 0; k < structure[layer+1].size(); k++) {
+					if(spike_times[layer][i]<=spike_times[layer+1][k])
+					{
+						deltas[layer][i]+=deltas[layer+1][k] * weights[layer](i,k); //(src, tar)
+						// ggf: ist weights[layer] oder weights[layer+1] richtig?
+					}
+				}
+			}
+			sum+=deltas[layer][i];
+		}
+
+		//normalize
+		if(sum!=0)
+		{
+			for (size_t i = 0; i < structure[layer].size(); i++) {
+				deltas[layer][i] /= sum;
+			}
+		}
+
+	}
+	return deltas;
+}
+
+/**
+ *
+ * @param spike_times
+ * @param deltas
+ * @param i
+ * @param j
+ * @param layer target layer. in [1, #layers]
+ * @return
+ */
+cypress::Real MnistITLLastLayer::compute_TTFS_gradient(std::vector<std::vector<cypress::Real>> spike_times, std::vector<std::vector<cypress::Real>> deltas, int i, int j, int layer) //dL/dw_ji^l
+{
+	if(spike_times[layer][j]<1)
+	{
+		if(spike_times[layer-1][i]<spike_times[layer][j]) //indices!!!!
+		{
+			return 0;
+		}
+		else
+		{
+			return -deltas[layer][j];
+		}
+		// sum=0
+		// for(tau=1; t_j^l)
+		// {
+		// 	sum+= S_i^l-1(tau)
+		// })
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+Matrix<Real> MnistITLLastLayer::compute_gradients(std::vector<PopulationBase> structure, std::vector<std::vector<cypress::Real>> spike_times, std::vector<std::vector<cypress::Real>> deltas, int layer) //target-layer
+{
+	Matrix<Real> gradients(structure[layer-1].size(), structure[layer].size());
+	#ifndef NDEBUG
+	assert(layer>=1);
+	#endif
+	for(size_t i=0; i<structure[layer-1].size(); i++)
+	{
+		for(size_t j=0; j<structure[layer].size(); j++)
+		{
+			gradients(i,j)= compute_TTFS_gradient(spike_times, deltas, i, j, layer);
+		}
+	}
+//	int i=0;
+//	for(auto neuron:structure[layer-1])
+//	{
+//		int j=0;
+//		for(auto neuron2:structure[layer])
+//		{
+//			gradients(i,j)= compute_TTFS_gradient(spike_times, deltas, i, j, layer);
+//			j++;
+//		}
+//		i++;
+//	}
+	return gradients;
+}
+
+
+
+void MnistITLLastLayer::update_mat_TTFS(Matrix<Real> &mat, Matrix<Real> &gradients, size_t sample_num, const Real learn_rate)
+{
+	Real sample_num_r(sample_num);
+	for (size_t i = 0; i < mat.rows(); i++) {
+		for (size_t j = 0; j < mat.cols(); j++) {
+			mat(i, j) = mat(i, j) - learn_rate * gradients(i,j) / sample_num_r;
+		}
+	}
+}
+
+
 }  // namespace SNAB

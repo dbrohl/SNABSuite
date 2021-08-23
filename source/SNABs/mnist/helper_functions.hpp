@@ -369,6 +369,9 @@ std::vector<std::vector<Real>> spikes_to_rates_ttfs(const PopulationBase pop,
                                                    Real duration, Real pause,
                                                    size_t batch_size);
 
+std::vector<std::vector<std::vector<cypress::Real>>> getSpikeTimes(std::vector<PopulationBase> populations, Real duration,
+																   Real pause, size_t batch_size);
+
 /**
  * @brief Compare original labels with simulation labels, return number of
  * correct labels
