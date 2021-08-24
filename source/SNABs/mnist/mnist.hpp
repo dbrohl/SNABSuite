@@ -255,23 +255,31 @@ protected:
 	bool m_last_layer_only = true;
 	size_t m_num_test_images = 10000;
 	size_t m_test_batchsize = 0;
-	std::vector<cypress::Matrix<Real>> backward_path_TTFS(
+	void backward_path_TTFS(
 		const std::vector<uint16_t> &labels, std::vector<cypress::Matrix<Real>> &weights,
-		std::vector<PopulationBase> populations, bool last_only);
+	                        std::vector<PopulationBase> populations, bool last_only);
 
 	std::vector<cypress::Real> compute_TTFS_error(
-	    uint16_t label, std::vector<cypress::Real> spikes_for_this_sample);
+	    const uint16_t label, const std::vector<cypress::Real> &spikes_for_this_sample);
 
 	std::vector<std::vector<cypress::Real>> computeAllDeltas(
-	    std::vector<PopulationBase> structure,
-	    std::vector<std::vector<cypress::Real>> spike_times,
-	    std::vector<cypress::Matrix<cypress::Real>> weights,
-	    std::vector<cypress::Real> errors);
-	cypress::Real compute_TTFS_gradient(std::vector<std::vector<cypress::Real>> spike_times, std::vector<std::vector<cypress::Real>> deltas, int i, int j, int layer);
+	    const std::vector<PopulationBase> &structure,
+	    const std::vector<std::vector<cypress::Real>> &spike_times,
+	    const std::vector<cypress::Matrix<cypress::Real>> &weights,
+	    const std::vector<cypress::Real> &errors);
+	cypress::Real compute_TTFS_gradient(
+	    const std::vector<std::vector<cypress::Real>> &spike_times,
+	    const std::vector<std::vector<cypress::Real>> &deltas,
+	    const int i,
+	    const int j,
+	    const int layer);
 
 
-	Matrix<Real> compute_gradients(std::vector<PopulationBase> structure, std::vector<std::vector<cypress::Real>> spike_times, std::vector<std::vector<cypress::Real>> deltas, int layer);
-	void update_mat_TTFS(Matrix<Real> &mat, Matrix<Real> &gradients, size_t sample_num, const Real learn_rate);
+	Matrix<Real> compute_gradients(const std::vector<PopulationBase> structure,
+								   const std::vector<std::vector<cypress::Real>> spike_times,
+								   const std::vector<std::vector<cypress::Real>> deltas,
+								   const int layer);
+	void update_mat_TTFS(Matrix<Real> &mat, const Matrix<Real> &gradients, const size_t sample_num, const Real learn_rate);
 
 };
 
