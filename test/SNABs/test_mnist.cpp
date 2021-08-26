@@ -1700,6 +1700,8 @@ TEST(mnist_helper, compare_labels)
 	EXPECT_EQ(compare_labels(label1, label2), size_t(4));
 }
 
+
+
 using MLP = MNIST::MLP<MNIST::MSE, MNIST::ReLU>;
 TEST(MLP, mat_X_vec)
 {
@@ -1822,5 +1824,103 @@ TEST(MLP, train)
 	mlp2.train();
 	EXPECT_TRUE(mlp2.forward_path_test() > 0.5);
 }
+auto simulate_run(Network& net){
+	for(auto pop : net.populations()){
+		for(auto neuron : pop){
+			auto spikes = neuron.parameters().parameters();
+			auto mat = std::make_shared<Matrix<Real>>(spikes);
+			neuron.signals().data(0,mat);
+		}
+	}
+}
+TEST(mnist_helper, getSpikeTimes)
+{
+	Network netw;
+	auto pop1 = netw.create_population<SpikeSourceArray>(8, SpikeSourceArrayParameters(),
+	                                                     SpikeSourceArraySignals().record_spikes(),"test1");
+	auto pop2 = netw.create_population<SpikeSourceArray>(11, SpikeSourceArrayParameters(),
+	                                                     SpikeSourceArraySignals().record_spikes(), "test2");
+	Real duration = 2.0;
+	Real pause = 3.0;
+	Real norm = duration + pause;
+	pop1[0].parameters().spike_times({3,7});
+	pop1[2].parameters().spike_times({1,9});
+	pop1[4].parameters().spike_times({2,50});
+	pop1[6].parameters().spike_times({8});
+	pop1[7].parameters().spike_times({5,9});
+
+
+	pop2[0].parameters().spike_times({3,7});
+	pop2[2].parameters().spike_times({1,9});
+	pop2[4].parameters().spike_times({2,50});
+	pop2[6].parameters().spike_times({8});
+	pop2[7].parameters().spike_times({5,9});
+	pop2[9].parameters().spike_times({4,5,6,7,8,9});
+
+	simulate_run(netw);
+
+	auto pops = netw.populations();
+	auto spikes = getSpikeTimes(pops, duration, pause, size_t(2));
+	EXPECT_EQ(spikes.size(), size_t(2));
+	EXPECT_EQ(spikes[0].size(), netw.populations().size());
+	EXPECT_EQ(spikes[1].size(), netw.populations().size());
+	EXPECT_EQ(spikes[0][0].size(), netw.populations()[0].size());
+	EXPECT_EQ(spikes[0][1].size(), netw.populations()[1].size());
+	EXPECT_EQ(spikes[1][0].size(), netw.populations()[0].size());
+	EXPECT_EQ(spikes[1][1].size(), netw.populations()[1].size());
+
+	// Sample 0
+	// No spike, so should be one
+	EXPECT_FLOAT_EQ(spikes[0][0][1], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][0][3], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][0][5], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][0][6], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][1][1], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][1][3], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][1][5], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][1][6], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][1][8], 1.0);
+	EXPECT_FLOAT_EQ(spikes[0][1][10], 1.0);
+
+	// A spike, so should be something
+
+	EXPECT_FLOAT_EQ(spikes[0][0][0], 3.0/norm);
+	EXPECT_FLOAT_EQ(spikes[0][0][2], 1.0/norm);
+	EXPECT_FLOAT_EQ(spikes[0][0][4], 2.0/norm);
+	EXPECT_FLOAT_EQ(spikes[0][0][7], 5.0/norm);
+	EXPECT_FLOAT_EQ(spikes[0][1][0], 3.0/norm);
+	EXPECT_FLOAT_EQ(spikes[0][1][2], 1.0/norm);
+	EXPECT_FLOAT_EQ(spikes[0][1][4], 2.0/norm);
+	EXPECT_FLOAT_EQ(spikes[0][1][7], 5.0/norm);
+	EXPECT_FLOAT_EQ(spikes[0][1][9], 4.0/norm);
+
+	// Sample 1
+	// No spike, so should be one
+	EXPECT_FLOAT_EQ(spikes[1][0][1], 1.0);
+	EXPECT_FLOAT_EQ(spikes[1][0][3], 1.0);
+	EXPECT_FLOAT_EQ(spikes[1][0][4], 1.0);
+	EXPECT_FLOAT_EQ(spikes[1][0][5], 1.0);
+
+	EXPECT_FLOAT_EQ(spikes[1][1][1], 1.0);
+	EXPECT_FLOAT_EQ(spikes[1][1][3], 1.0);
+	EXPECT_FLOAT_EQ(spikes[1][1][4], 1.0);
+	EXPECT_FLOAT_EQ(spikes[1][1][5], 1.0);
+	EXPECT_FLOAT_EQ(spikes[1][1][8], 1.0);
+	EXPECT_FLOAT_EQ(spikes[1][1][10], 1.0);
+
+	// A spike, so should be something
+	EXPECT_FLOAT_EQ(spikes[1][0][0], (7.0-norm)/norm);
+	EXPECT_FLOAT_EQ(spikes[1][0][2], (9.0-norm)/norm);
+	EXPECT_FLOAT_EQ(spikes[1][0][6], (8.0-norm)/norm);
+	EXPECT_FLOAT_EQ(spikes[1][0][7], (5.0-norm)/norm);
+
+	EXPECT_FLOAT_EQ(spikes[1][1][0], (7.0-norm)/norm);
+	EXPECT_FLOAT_EQ(spikes[1][1][2], (9.0-norm)/norm);
+	EXPECT_FLOAT_EQ(spikes[1][1][6], (8.0-norm)/norm);
+	EXPECT_FLOAT_EQ(spikes[1][1][7], (5.0-norm)/norm);
+	EXPECT_FLOAT_EQ(spikes[1][1][9], (5.0-norm)/norm);
+}
+
+
 
 }  // namespace mnist_helper

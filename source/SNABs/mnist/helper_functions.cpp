@@ -558,7 +558,7 @@ std::vector<std::vector<std::vector<cypress::Real>>> getSpikeTimes(std::vector<P
 					spike_times[k][layer][i]=1;
 				}
 				else {
-					spike_times[k][layer][i]=(binnedSpikes[k]-k*(duration+pause))/(duration+pause);
+					spike_times[k][layer][i]=(binnedSpikes[k]-cypress::Real(k)*(duration+pause))/(duration+pause);
 				}
 
 					#ifndef NDEBUG

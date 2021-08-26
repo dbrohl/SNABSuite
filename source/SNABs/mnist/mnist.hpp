@@ -257,7 +257,7 @@ protected:
 	size_t m_test_batchsize = 0;
 	void backward_path_TTFS(
 		const std::vector<uint16_t> &labels, std::vector<cypress::Matrix<Real>> &weights,
-	                        std::vector<PopulationBase> populations, bool last_only);
+	                        std::vector<PopulationBase> populations,size_t batch, bool last_only);
 
 	std::vector<cypress::Real> compute_TTFS_error(
 	    const uint16_t label, const std::vector<cypress::Real> &spikes_for_this_sample);
