@@ -542,7 +542,8 @@ std::vector<std::vector<std::vector<cypress::Real>>> getSpikeTimes(std::vector<P
 		oneLayer.push_back(std::vector<cypress::Real>(populations[j].size(), 0));
 	}
 	std::vector<std::vector<std::vector<cypress::Real>>> spike_times(batch_size, oneLayer); //[sample][layer][neuron]
-
+	int actualSpikesInLastLayer=0;
+	int artificialSpikesInLastLayer=0;
 	for(size_t layer=0; layer<populations.size(); layer++)
 	{
 //		for(const auto &neuron : populations[layer]) {
@@ -555,9 +556,17 @@ std::vector<std::vector<std::vector<cypress::Real>>> getSpikeTimes(std::vector<P
 			{
 				if(binnedSpikes[k]==std::numeric_limits<Real>::max())
 				{
+					if(layer==populations.size()-1)
+					{
+						artificialSpikesInLastLayer++;
+					}
 					spike_times[k][layer][i]=1;
 				}
 				else {
+					if(layer==populations.size()-1)
+					{
+						actualSpikesInLastLayer++;
+					}
 					spike_times[k][layer][i]=(binnedSpikes[k]-cypress::Real(k)*(duration+pause))/(duration+pause);
 				}
 
@@ -568,8 +577,10 @@ std::vector<std::vector<std::vector<cypress::Real>>> getSpikeTimes(std::vector<P
 			//each spike is now at a time between 0 and 1
 		}
 	}
+	global_logger().warn("getSpikeTimes", "Percentage artificial spikes: "+
+			  std::to_string(artificialSpikesInLastLayer*1.0/(artificialSpikesInLastLayer+actualSpikesInLastLayer)));
 	return spike_times;
-																						  }
+}
 
 size_t compare_labels(std::vector<uint16_t> &label, std::vector<uint16_t> &res)
 {

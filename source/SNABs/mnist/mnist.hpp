@@ -262,14 +262,11 @@ protected:
 	std::vector<cypress::Real> compute_TTFS_error(
 	    const uint16_t label, const std::vector<cypress::Real> &spikes_for_this_sample);
 
-	std::vector<std::vector<cypress::Real>> computeAllDeltas(
-	    const std::vector<PopulationBase> &structure,
-	    const std::vector<std::vector<cypress::Real>> &spike_times,
-	    const std::vector<cypress::Matrix<cypress::Real>> &weights,
-	    const std::vector<cypress::Real> &errors);
+	std::vector<Real> mat_X_vec(const Matrix<Real> &mat,
+	                                               const std::vector<Real> &vec);
 	cypress::Real compute_TTFS_gradient(
 	    const std::vector<std::vector<cypress::Real>> &spike_times,
-	    const std::vector<std::vector<cypress::Real>> &deltas,
+	    const std::vector<cypress::Real> &errors,
 	    const int i,
 	    const int j,
 	    const int layer);
@@ -277,7 +274,7 @@ protected:
 
 	Matrix<Real> compute_gradients(const std::vector<PopulationBase> structure,
 								   const std::vector<std::vector<cypress::Real>> spike_times,
-								   const std::vector<std::vector<cypress::Real>> deltas,
+								   const std::vector<cypress::Real> errors,
 								   const int layer);
 	void update_mat_TTFS(Matrix<Real> &mat, const Matrix<Real> &gradients, const size_t sample_num, const Real learn_rate);
 
