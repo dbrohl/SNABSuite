@@ -398,7 +398,7 @@ size_t MNIST_BASE::create_deep_network(Network &netw, Real max_weight,
             auto pop = SpikingUtils::add_population(m_neuron_type_str, netw,
                                                     m_neuro_params, size, "");
             auto conns = mnist_helper::dense_weights_to_conn(
-                layer_weights, m_weights_scale_factor, 1.0);
+                layer_weights, m_weights_scale_factor, m_syn_delay);
             netw.add_connection(netw.populations()[layer_id - 1], pop,
                                 Connector::from_list(conns),
                                 ("dense_" + std::to_string(dense_counter)).c_str());
@@ -593,15 +593,15 @@ void MnistITLLastLayer::run_netw(cypress::Network &netw)
 				 * ggf. weight regularization
 				 * bessere Plots
 				 * */
-				std::vector<cypress::Matrix<Real>> oldW = m_mlp->get_weights();
+				//std::vector<cypress::Matrix<Real>> oldW = m_mlp->get_weights();
 
 				backward_path_TTFS(std::get<1>(i), m_mlp->get_weights(), netw.populations(), batch_count+m_batchsize*train_run, m_last_layer_only);
 //				mnist_helper::update_conns_from_mat(
 //					m_mlp->get_weights(), netw, 1.0, m_weights_scale_factor);
 				mnist_helper::update_conns_from_mat(
-				    m_mlp->get_weights(), netw, 1.0, 0);
+				    m_mlp->get_weights(), netw, 1.0, m_weights_scale_factor);
 
-				std::vector<cypress::Matrix<Real>> newW = m_mlp->get_weights();
+				//std::vector<cypress::Matrix<Real>> newW = m_mlp->get_weights();
 
 //				for(size_t layer=0; layer<oldW.size(); layer++)
 //				{
@@ -965,7 +965,7 @@ cypress::Real MnistITLLastLayer::compute_TTFS_gradient(const std::vector<std::ve
 	//from S4NN code:
         //delta_o[:, cp.newaxis] * hasFired_o
 
-	if(spike_times[layer-1][i]<spike_times[layer][j])
+	if(spike_times[layer-1][i]+m_syn_delay/(m_duration+m_pause)<spike_times[layer][j])
 	{
 		return -errors[j];
 	}

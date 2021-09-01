@@ -28,7 +28,7 @@
         "max_weight": 0.02,
         "train_data": false,
         "batch_parallel": true,
-        "learn_rate": 0.005,
+        "learn_rate": 0.05,
         "epochs": 2,
         "dnn_file": "networks/netw_spikey.msgpack",
         "scaled_image": true,
