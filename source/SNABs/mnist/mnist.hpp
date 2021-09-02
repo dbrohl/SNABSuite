@@ -80,9 +80,11 @@ protected:
 
 	cypress::Real m_weights_scale_factor = 0.0;
 	std::vector<cypress::Real> m_conv_weights_scale_factors;
+	cypress::Real m_syn_delay = 1.0;
 
 	bool m_count_spikes = false;
 	std::vector<cypress::PopulationBase> m_all_pops;
+	cypress::Real m_gamma = 3;
 
 	/**
 	 * @brief Converts a prepared json to a network
@@ -255,9 +257,10 @@ protected:
 	bool m_last_layer_only = true;
 	size_t m_num_test_images = 10000;
 	size_t m_test_batchsize = 0;
+
 	void backward_path_TTFS(
 		const std::vector<uint16_t> &labels, std::vector<cypress::Matrix<Real>> &weights,
-	                        std::vector<PopulationBase> populations,size_t batch, bool last_only);
+	                        std::vector<PopulationBase> populations,bool last_only);
 
 	std::vector<cypress::Real> compute_TTFS_error(
 	    const uint16_t label, const std::vector<cypress::Real> &spikes_for_this_sample);
@@ -277,6 +280,8 @@ protected:
 								   const std::vector<cypress::Real> errors,
 								   const int layer);
 	void update_mat_TTFS(Matrix<Real> &mat, const Matrix<Real> &gradients, const size_t sample_num, const Real learn_rate);
+	Matrix<Real> compute_backprop_mat(const std::vector<PopulationBase> structure, const std::vector<std::vector<cypress::Real>>& spike_times,Matrix<Real> weights, const int layer);
+
 
 };
 

@@ -75,6 +75,12 @@ void MNIST_BASE::read_config()
 	if (m_config_file.find("count_spikes") != m_config_file.end()) {
 		m_count_spikes = m_config_file["count_spikes"].get<bool>();
 	}
+	if (m_config_file.find("gamma") != m_config_file.end())
+	{
+		m_gamma = m_config_file["gamma"].get<Real>();
+	}
+
+
 #if SNAB_DEBUG
 	m_count_spikes = true;
 #endif
@@ -571,13 +577,13 @@ void MnistITLLastLayer::run_netw(cypress::Network &netw)
 	size_t counter = 0;
 	for (size_t train_run = 0; train_run < m_config_file["epochs"];
 	     train_run++) {
-		global_logger().warn("MNIST", "next epoch\n");
+		global_logger().debug("MNIST", "next epoch\n");
 		m_batch_data = mnist_helper::create_batches(m_spmnist, m_batchsize,
 		                                            m_duration, m_pause, true);
 		int batch_count=0;
 		for (auto &i : m_batch_data) {
 			batch_count++;
-			global_logger().warn("MNIST", "Batch "+std::to_string(batch_count)+"/"+std::to_string(m_batch_data.size()));
+			global_logger().info("MNIST", "Batch "+std::to_string(batch_count)+"/"+std::to_string(m_batch_data.size()));
 			if (std::get<1>(i).size() != m_batchsize) {
 				continue;
 			}
@@ -593,86 +599,51 @@ void MnistITLLastLayer::run_netw(cypress::Network &netw)
 				 * ggf. weight regularization
 				 * bessere Plots
 				 * */
-				//std::vector<cypress::Matrix<Real>> oldW = m_mlp->get_weights();
+				std::vector<cypress::Matrix<Real>> oldW = m_mlp->get_weights();
 
-				backward_path_TTFS(std::get<1>(i), m_mlp->get_weights(), netw.populations(), batch_count+m_batchsize*train_run, m_last_layer_only);
+				backward_path_TTFS(std::get<1>(i), m_mlp->get_weights(), netw.populations(), m_last_layer_only);
 //				mnist_helper::update_conns_from_mat(
 //					m_mlp->get_weights(), netw, 1.0, m_weights_scale_factor);
 				mnist_helper::update_conns_from_mat(
 				    m_mlp->get_weights(), netw, 1.0, m_weights_scale_factor);
 
-				//std::vector<cypress::Matrix<Real>> newW = m_mlp->get_weights();
+				std::vector<cypress::Matrix<Real>> newW = m_mlp->get_weights();
 
-//				for(size_t layer=0; layer<oldW.size(); layer++)
-//				{
-//					cypress::Real absSum=0;
-//					cypress::Real oldMin=oldW[0](0,0);
-//					cypress::Real oldMax=oldW[0](0,0);
-//					cypress::Real newMin=newW[0](0,0);
-//					cypress::Real newMax=newW[0](0,0);
-//					for(size_t from=0; from < oldW[layer].rows(); from++)
-//					{
-//						for(size_t to=0; to<oldW[layer].cols(); to++)
-//						{
-//							absSum+=abs(oldW[layer](from, to)-newW[layer](from, to));
-//							if(oldW[layer](from, to)<oldMin)
-//							{
-//								oldMin=oldW[layer](from, to);
-//							}
-//							if(oldW[layer](from, to)>oldMax)
-//							{
-//								oldMax=oldW[layer](from, to);
-//							}
-//							if(newW[layer](from, to)<newMin)
-//							{
-//								newMin=newW[layer](from, to);
-//							}
-//							if(newW[layer](from, to)>newMax)
-//							{
-//								newMax=newW[layer](from, to);
-//							}
-//						}
-//					}
-//				    absSum/= oldW[layer].cols()*oldW[layer].rows();
-//					weight_changes[layer].emplace_back(std::vector<Real>{Real(counter) / Real(m_batch_data.size()), absSum});
-//					global_logger().warn("MNIST", "Weights of layer "+std::to_string(layer)+" changed from "+std::to_string(oldMin)+" - "+
-//						std::to_string(oldMax)+" to "+std::to_string(newMin)+" -"+std::to_string(newMax)+"with differences of "+std::to_string(absSum));
-//				}
-
-
-				//check if something has changed
-//				std::vector<cypress::Matrix<Real>> new_w = m_mlp->get_weights();
-//				bool found=false;
-//				if(oldW.size()!=new_w.size())
-//				{
-//					found= true;
-//					global_logger().warn("MNIST", "Size of weights changed. This should not happen!");
-//				}
-//				for(size_t i=0; i<oldW.size()&&!found; i++)
-//				{
-//					if(oldW[i].rows()!=new_w[i].rows() || oldW[i].cols()!=new_w[i].cols())
-//					{
-//						found= true;
-//						global_logger().warn("MNIST", "Size of weights changed. This should not happen!"+std::to_string(i));
-//					}
-//					for(size_t j=0; j<oldW[i].rows()&&!found; j++)
-//					{
-//						for(size_t k=0; k<oldW[i].cols()&&!found; k++)
-//						{
-//							if(oldW[i](j,k)!=new_w[i](j,k))
-//							{
-//								found=true;
-//							}
-//						}
-//					}
-//				}
-//				if(!found)
-//				{
-//					global_logger().warn("MNIST", "No changes in weights found. ");
-//				}
-
-
-
+				for(size_t layer=0; layer<oldW.size(); layer++)
+				{
+					cypress::Real absSum=0;
+					cypress::Real oldMin=oldW[0](0,0);
+					cypress::Real oldMax=oldW[0](0,0);
+					cypress::Real newMin=newW[0](0,0);
+					cypress::Real newMax=newW[0](0,0);
+					for(size_t from=0; from < oldW[layer].rows(); from++)
+					{
+						for(size_t to=0; to<oldW[layer].cols(); to++)
+						{
+							absSum+=abs(oldW[layer](from, to)-newW[layer](from, to));
+							if(oldW[layer](from, to)<oldMin)
+							{
+								oldMin=oldW[layer](from, to);
+							}
+							if(oldW[layer](from, to)>oldMax)
+							{
+								oldMax=oldW[layer](from, to);
+							}
+							if(newW[layer](from, to)<newMin)
+							{
+								newMin=newW[layer](from, to);
+							}
+							if(newW[layer](from, to)>newMax)
+							{
+								newMax=newW[layer](from, to);
+							}
+						}
+					}
+				    absSum/= oldW[layer].cols()*oldW[layer].rows();
+					weight_changes[layer].emplace_back(std::vector<Real>{Real(counter) / Real(m_batch_data.size()), absSum});
+					global_logger().debug("MNIST", "Weights of layer "+std::to_string(layer)+" changed from "+std::to_string(oldMin)+" - "+
+						std::to_string(oldMax)+" to "+std::to_string(newMin)+" -"+std::to_string(newMax)+" with differences of "+std::to_string(absSum));
+				}
 			}
 			else {
 				// BEGIN OF RATE_CODING
@@ -812,13 +783,15 @@ void MnistITLLastLayer::run_netw(cypress::Network &netw)
 	Utilities::plot_1d_curve(_debug_filename("accuracies.csv"), m_backend, 0,
 	                         1);
 
-	for(size_t layer=0; layer<weight_changes.size(); layer++)
+	//Plots averaged weight updates for each layer,
+	// needs the calculation of those averaged updates below the call of backward_path_TTFS
+	/*for(size_t layer=0; layer<weight_changes.size(); layer++)
 	{
 		Utilities::write_vector2_to_csv(weight_changes[layer],
 			                            _debug_filename("weightChanges"+std::to_string(layer)+".csv"));
 		Utilities::plot_1d_curve(_debug_filename("weightChanges"+std::to_string(layer)+".csv"), m_backend, 0,
 			                     1);
-	}
+	}*/
 }
 
 std::vector<std::array<cypress::Real, 4>> MnistITLLastLayer::evaluate()
@@ -828,28 +801,57 @@ std::vector<std::array<cypress::Real, 4>> MnistITLLastLayer::evaluate()
 	        std::array<cypress::Real, 4>({m_sim_time, NaN(), NaN(), NaN()})};
 }
 
-// HERE
-// copied from mnist_mlp.hpp
-/**
+Matrix<Real> MnistITLLastLayer::compute_backprop_mat(const std::vector<PopulationBase> structure, const std::vector<std::vector<cypress::Real>>& spike_times,Matrix<Real> weights, const int layer) //target-layer // Copy Weights here!
+{
+	#ifndef NDEBUG
+		assert(layer>=1);
+	#endif
+	for(size_t i=0; i<structure[layer].size(); i++)
+	{
+		for(size_t j=0; j<structure[layer+1].size(); j++)
+		{
+            if(!(spike_times[layer][i]+m_syn_delay/(m_duration+m_pause)<spike_times[layer+1][j]))
+            {
+                weights(i,j)= 0.0;
+            }
+		}
+	}
+	return weights;
+}
 
- */
+namespace{
+cypress::Real norm(const std::vector<cypress::Real>& vec){
+    Real sum = 0;
+    for(auto& i: vec)
+        sum += i*i;
+    if (sum==0)
+        return 1;
+    return std::sqrt(sum);
+}
+void normalize(std::vector<cypress::Real> &vec){
+    auto n = norm(vec);
+    for(auto& i: vec){
+        i/=n;
+    }
+}
+}
+
 void MnistITLLastLayer::backward_path_TTFS(
 	const std::vector<uint16_t> &labels, std::vector<cypress::Matrix<Real>> &weights,
-    std::vector<PopulationBase> populations,size_t batch, bool last_only=false)
+    std::vector<PopulationBase> populations, bool last_only=false)
 {
-// #ifndef NDEBUG
-// 	assert(m_batchsize == activations.back().size());
-// #endif
 	const std::vector<cypress::Matrix<cypress::Real>> orig_weights = weights;
 
-	global_logger().warn("MNIST", "duration: "+std::to_string(m_duration)+", pause: "+std::to_string(m_pause));
 	std::vector<std::vector<std::vector<cypress::Real>>> spike_times=mnist_helper::getSpikeTimes(populations, m_duration, m_pause, m_batchsize);
 
-	bool noPlotYet=true;
+
+	//bool noPlotYet=true;
 	for (size_t sample = 0; sample < m_batchsize; sample++) {
 
-		//debug plots
-		if(labels[sample]==0 && noPlotYet && batch%10==1)
+		// debug plots
+		// Shows the first spikes of the output layer for the first image labeled X in each batch
+        /*std::cout << labels[sample] <<std::endl;
+		if(labels[sample]==5 && noPlotYet && batch%10==1)
 		{
 			noPlotYet=false;
 			std::vector<std::vector<cypress::Real>> plotSpikeTimes;
@@ -863,36 +865,29 @@ void MnistITLLastLayer::backward_path_TTFS(
 			Utilities::write_vector2_to_csv(plotSpikeTimes,
 			                                _debug_filename("spike_times"+std::to_string(batch)+".csv"));
 			Utilities::plot_spikes(_debug_filename("spike_times"+std::to_string(batch)+".csv"), m_backend);
-		}
-
+		}*/
 		std::vector<cypress::Real> errors;
 		for(size_t layer = populations.size()-1; layer>0; layer--)
 		{
+
+            /*std::vector<cypress::Real> errors;std::cout << "spike_times"<<std::endl;
+            for(auto i : spike_times[sample][layer]){
+                std::cout << i <<",";
+            }
+            std::cout <<std::endl;*/
+
 			if(layer==populations.size()-1)
 			{
 				errors=compute_TTFS_error(labels[sample], spike_times[sample][populations.size()-1]);
 			}
 			else{
-				errors = mat_X_vec(weights[layer], errors);
+                auto mat =  compute_backprop_mat(populations, spike_times[sample], orig_weights[layer], layer);
+				errors = mat_X_vec(mat, errors);
+                normalize(errors);
 			}
-			//from gradient normalization part in S4NN paper
-//			cypress::Real sum=0;
-//			for(size_t i=0; i<errors.size(); i++)
-//			{
-//				sum+=errors[i]*errors[i];
-//			}
-//			if(sum!=0)
-//			{
-//				for (size_t i = 0; i < errors.size(); i++) {
-//					errors[i]/=sum;
-//				}
-//			}
 
 
 			Matrix<Real> gradients = compute_gradients(populations, spike_times[sample], errors, layer);
-//			global_logger().warn("MNIST", "Gradients layer"+std::to_string(layer));
-//			std::cout<<gradients;
-//			std::cout<<weights[layer-1];
 			update_mat_TTFS(weights[layer-1], gradients, m_batchsize,
 			                m_mlp->learnrate());
 		}
@@ -900,13 +895,8 @@ void MnistITLLastLayer::backward_path_TTFS(
 
 		//TODO m_constraint.constrain_weights(m_layers);
 	}
-	if(noPlotYet)
-	{
-		global_logger().warn("MNIST", "No spike time plot for batch "+std::to_string(batch));
-	}
 	//TODO m_scaled_layerwise = false;
 }
-
 /**
  *
  * @param label ground truth
@@ -917,7 +907,6 @@ std::vector<cypress::Real> MnistITLLastLayer::compute_TTFS_error(const uint16_t 
 {
 	std::vector<cypress::Real> errors;
 	cypress::Real min_time=*min_element(spike_times.begin(), spike_times.end());
-	cypress::Real gamma=0.2; //3.0/67.0; //TODO
 
 	int expected_later_counter=0;
 	int okay_counter=0;
@@ -925,7 +914,7 @@ std::vector<cypress::Real> MnistITLLastLayer::compute_TTFS_error(const uint16_t 
 	for (size_t i = 0; i < spike_times.size(); i++) {
 		if(min_time==1)
 		{
-			errors.push_back(i==label ? 1-gamma : 1);
+			errors.push_back(i==label ? -m_gamma/(m_pause+m_duration)  : 0);
 		}
 		else
 		{
@@ -934,9 +923,9 @@ std::vector<cypress::Real> MnistITLLastLayer::compute_TTFS_error(const uint16_t 
 			{
 				expected_time=min_time;
 			}
-			else if (spike_times[i]-min_time < gamma)
+			else if (spike_times[i]-min_time < m_gamma/(m_pause+m_duration))
 			{
-				expected_time=std::min(min_time+gamma, cypress::Real(1));
+				expected_time=std::min(min_time+m_gamma/(m_pause+m_duration), cypress::Real(1));
 				expected_later_counter++;
 			}
 			else
@@ -947,9 +936,11 @@ std::vector<cypress::Real> MnistITLLastLayer::compute_TTFS_error(const uint16_t 
 			errors.push_back(expected_time-spike_times[i]); // divided by t_max, but t_max is 1
 		}
 	}
-//	global_logger().warn("MNIST", std::to_string(expected_later_counter*1.0/(expected_later_counter+okay_counter)));
+    normalize(errors);
 	return errors;
 }
+
+
 
 /**
  *
@@ -962,41 +953,13 @@ std::vector<cypress::Real> MnistITLLastLayer::compute_TTFS_error(const uint16_t 
  */
 cypress::Real MnistITLLastLayer::compute_TTFS_gradient(const std::vector<std::vector<cypress::Real>> &spike_times, const std::vector<cypress::Real> &errors, const int i, const int j, const int layer) //dL/dw_ji^l
 {
-	//from S4NN code:
-        //delta_o[:, cp.newaxis] * hasFired_o
-
 	if(spike_times[layer-1][i]+m_syn_delay/(m_duration+m_pause)<spike_times[layer][j])
 	{
-		return -errors[j];
+		return errors[j];
 	}
 	else {
 		return 0;
 	}
-
-
-
-
-
-	/*From S4NN paper: if(spike_times[layer][j]<1)
-	{
-		if(spike_times[layer-1][i]<spike_times[layer][j]) //indices!!!!
-		{
-			return 0;
-		}
-		else
-		{
-			return -deltas[layer][j];
-		}
-		// sum=0
-		// for(tau=1; t_j^l)
-		// {
-		// 	sum+= S_i^l-1(tau)
-		// })
-	}
-	else
-	{
-		return 0;
-	}*/
 }
 
 Matrix<Real> MnistITLLastLayer::compute_gradients(const std::vector<PopulationBase> structure, const std::vector<std::vector<cypress::Real>> spike_times, const std::vector<cypress::Real> errors, const int layer) //target-layer
@@ -1020,13 +983,11 @@ Matrix<Real> MnistITLLastLayer::compute_gradients(const std::vector<PopulationBa
 void MnistITLLastLayer::update_mat_TTFS(Matrix<Real> &mat, const Matrix<Real> &gradients, const size_t sample_num, const Real learn_rate)
 {
 	Real sample_num_r(sample_num);
-//	std::cout<<"Weights: "<<mat<<std::endl;
-//	std::cout<<"gradients: "<<gradients<<std::endl;
-//	std::cout<<"Factor: "<<learn_rate/sample_num_r<<std::endl<<std::endl;
 
 	for (size_t i = 0; i < mat.rows(); i++) {
 		for (size_t j = 0; j < mat.cols(); j++) {
 			mat(i, j) = mat(i, j) - learn_rate * gradients(i,j) / sample_num_r;
+           //mat(i, j) = mat(i, j) - learn_rate * 0.01 * mat(i, j);
 		}
 	}
 }

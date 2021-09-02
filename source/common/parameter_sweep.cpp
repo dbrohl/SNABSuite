@@ -96,7 +96,13 @@ std::vector<cypress::Json> ParameterSweep::generate_sweep_vector(
 			// the current one
 			cypress::Real current_value = begin + j * step_size;
 			for (size_t k = 0; k < sweep_temp.size(); k++) {
+
 				sweep_temp[k][i] = current_value;
+				if(i.find("tau_syn_E")!=std::string::npos)
+				{
+					std::string other_key = i.substr(0, i.find("tau_syn_E")) + "tau_syn_I";
+					sweep_temp[k][other_key]=current_value;
+				}
 			}
 			// Insert this subpart (constant current_value) into the result
 			sweep.insert(sweep.end(), sweep_temp.begin(), sweep_temp.end());
