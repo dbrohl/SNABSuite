@@ -306,9 +306,13 @@ void ParameterSweep::execute()
 				auto res = snab->evaluate();
 				{
 					std::lock_guard<std::mutex> lock(res_mutex);
-					m_results[this_idx] = res;
+					m_results[this_idx] = res; //[sweep_index][response_time,sim_time,accuracy][value,std_dev,min,max]
 					// Add the current job to the list of finished indices
 					m_jobs_done.emplace_back(index);
+//					if(this_idx % (int)(m_results.size()/100) ==0)
+//					{
+//						cypress::global_logger().error("Sweep", std::to_string(this_idx)+"/"+ std::to_string(m_results.size())); //TODO change to appropriate output level
+//					}
 					backup_count++;
 					if (backup_count >= 50) {
 						backup_simulation_results();
@@ -443,6 +447,19 @@ void ParameterSweep::write_csv()
 		ofs << "\n";
 	}
 	ofs.close();
+
+	if(m_sweep_names.size()==1)
+	{
+		cypress::global_logger().error("sweep", "1d plot");
+		Utilities::plot_1d_curve(filename, "test_name", 0, 9, -1);
+	}
+	if(m_sweep_names.size()==2)
+	{
+		cypress::global_logger().error("sweep", "2d plot "+filename);
+		Utilities::plot_2d_heatmap(filename, 10);
+	}
+
+
 
 	// Remove backup file
 	unlink((m_backend + "_bak.json").c_str());

@@ -87,7 +87,7 @@ int main(int argc, const char *argv[])
 	auto json = cypress::Json::parse(ifs);
 
 	// Suppress all logging
-	cypress::global_logger().min_level(cypress::LogSeverity::INFO, 1);
+	cypress::global_logger().min_level(cypress::LogSeverity::ERROR, 1);
 
 	ParameterSweep sweep(argv[1], json, bench_index, threads);
 

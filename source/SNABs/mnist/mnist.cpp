@@ -746,6 +746,12 @@ void MnistITLLastLayer::run_netw(cypress::Network &netw)
 				pids.emplace_back(pop.pid());
 			}
 		}
+
+		if (m_ttfs) {
+			auto tmp =
+			    TTFS_response_time({m_label_pops[0]}, m_batchsize, m_duration, m_pause);
+			m_time_to_sol.insert(m_time_to_sol.end(), tmp.begin(), tmp.end());
+		}
 	}
 
 	if (m_count_spikes) {
@@ -797,6 +803,15 @@ void MnistITLLastLayer::run_netw(cypress::Network &netw)
 std::vector<std::array<cypress::Real, 4>> MnistITLLastLayer::evaluate()
 {
 	Real acc = Real(m_global_correct) / Real(m_num_images);
+
+	if (m_ttfs) {
+		Real max, min, avg, std_dev;
+		Utilities::calculate_statistics(m_time_to_sol, min, max, avg, std_dev);
+
+		return {std::array<cypress::Real, 4>({acc, NaN(), NaN(), NaN()}),
+		        std::array<cypress::Real, 4>({m_sim_time, NaN(), NaN(), NaN()}),
+		        std::array<cypress::Real, 4>({avg, std_dev, min, max})};
+	}
 	return {std::array<cypress::Real, 4>({acc, NaN(), NaN(), NaN()}),
 	        std::array<cypress::Real, 4>({m_sim_time, NaN(), NaN(), NaN()})};
 }

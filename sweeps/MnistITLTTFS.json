@@ -4,16 +4,15 @@
     "genn": {
       "neuron_type": "IF_curr_exp",
       "neuron_params": {
-        "tau_syn_E": [3,30,5],
+        "tau_syn_E": [10,15,3],
         "tau_syn_I": 3,
-        "tau_refrac": 15,
-        "tau_m": 8,
+        "tau_m": [7,12, 3],
         "cm": 0.2
       },
-      "duration": 7,
+      "duration": 10,
       "train_data": true,
       "learn_rate": 0.1,
-      "gamma": [1,60,5]
+      "gamma": [1, 5, 10]
     }
   }
 }
