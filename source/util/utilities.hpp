@@ -240,14 +240,6 @@ public:
 	static void plot_1d_curve(std::string filename, std::string simulator,
 	                          size_t x_col, size_t y_col, int std_dev_vol = -1);
 
-
-	/**
-	 * @brief Plotting a heatmap.
-	 *
-	 * @param filename file containing data
-	 * @param z_col column of z values
-	 */
-	static void plot_2d_heatmap(std::string filename,size_t z_col);
 };
 }  // namespace SNAB
 

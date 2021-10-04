@@ -6,27 +6,27 @@
         "invalid": true
     },
     "genn": {
-        "neuron_type": "IF_cond_exp",
+        "neuron_type": "IF_curr_exp",
         "neuron_params": {
-            "tau_syn_E": 0,
-            "tau_syn_I": -130,
+            "tau_syn_E": 7.44,
+            "tau_syn_I": 7.44,
             "v_rest": -65,
             "v_reset": -65,
             "v_thresh": -55,
             "tau_refrac": 20,
-            "tau_m": 8,
+            "tau_m": 17.11,
             "cm": 0.2
         },
-        "images": 100,
-        "batchsize": 10,
-        "duration": 15,
+        "images": 60000,
+        "batchsize": 100,
+        "duration": 12,
         "max_freq": 0,
         "pause": 60,
         "poisson": false,
         "max_weight": 0.0,
-        "train_data": true,
+        "train_data": false,
         "batch_parallel": true,
-        "learn_rate": 0.1,
+        "learn_rate": 0.2,
         "epochs": 5,
         "dnn_file": "networks/netw_spikey.msgpack",
         "scaled_image": true,
@@ -35,7 +35,7 @@
         "positive": false,
         "loss_function": "CatHinge",
         "num_test_images": 100,
-        "test_batchsize": 100,
+        "test_batchsize": 1000,
         "random_init": true,
         "activity_based_scaling": 0.0,
         "ttfs": true,
@@ -43,7 +43,7 @@
             "timestep": 0.1,
             "keep_compile": true
         },
-        "gamma": 5
+        "gamma": 0.5
     },
     "spikey": {
         "invalid": true,

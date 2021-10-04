@@ -207,15 +207,4 @@ void Utilities::plot_1d_curve(std::string filename, std::string simulator,
 	}
 }
 
-void Utilities::plot_2d_heatmap(std::string filename,size_t z_col)
-{
-	std::string exec = "python3 ../plot/2dim_plot.py " + filename + " -z " +
-	                   std::to_string(z_col);
-	try {
-		system((exec + " &").c_str());
-	}
-	catch (...) {
-		std::cerr << "Calling 2dim_plot.py caused an error!" << std::endl;
-	}
-}
 }  // namespace SNAB

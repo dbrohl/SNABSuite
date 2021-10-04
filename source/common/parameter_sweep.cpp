@@ -98,6 +98,8 @@ std::vector<cypress::Json> ParameterSweep::generate_sweep_vector(
 			for (size_t k = 0; k < sweep_temp.size(); k++) {
 
 				sweep_temp[k][i] = current_value;
+
+				//tau_syn_E and tau_syn_I should have the same values
 				if(i.find("tau_syn_E")!=std::string::npos)
 				{
 					std::string other_key = i.substr(0, i.find("tau_syn_E")) + "tau_syn_I";
@@ -309,10 +311,6 @@ void ParameterSweep::execute()
 					m_results[this_idx] = res; //[sweep_index][response_time,sim_time,accuracy][value,std_dev,min,max]
 					// Add the current job to the list of finished indices
 					m_jobs_done.emplace_back(index);
-//					if(this_idx % (int)(m_results.size()/100) ==0)
-//					{
-//						cypress::global_logger().error("Sweep", std::to_string(this_idx)+"/"+ std::to_string(m_results.size())); //TODO change to appropriate output level
-//					}
 					backup_count++;
 					if (backup_count >= 50) {
 						backup_simulation_results();
@@ -447,19 +445,6 @@ void ParameterSweep::write_csv()
 		ofs << "\n";
 	}
 	ofs.close();
-
-	if(m_sweep_names.size()==1)
-	{
-		cypress::global_logger().error("sweep", "1d plot");
-		Utilities::plot_1d_curve(filename, "test_name", 0, 9, -1);
-	}
-	if(m_sweep_names.size()==2)
-	{
-		cypress::global_logger().error("sweep", "2d plot "+filename);
-		Utilities::plot_2d_heatmap(filename, 10);
-	}
-
-
 
 	// Remove backup file
 	unlink((m_backend + "_bak.json").c_str());

@@ -257,6 +257,7 @@ protected:
 	bool m_last_layer_only = true;
 	size_t m_num_test_images = 10000;
 	size_t m_test_batchsize = 0;
+	std::vector<cypress::Real> m_time_to_sol;
 
 	void backward_path_TTFS(
 		const std::vector<uint16_t> &labels, std::vector<cypress::Matrix<Real>> &weights,
